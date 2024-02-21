@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spiget Search</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #searchContainer {
+      display: flex;
+      align-items: center;
+    }
+    #searchInput {
+      width: 300px;
+      padding: 8px;
+      margin-right: 10px;
+    }
+    #searchButton {
+      padding: 8px;
+      cursor: pointer;
+    }
+    #resultsContainer {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: none;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 10px;
+        text-align: left;
+    }
+    #popularPlugins {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 10px;
+      text-align: left;
+    }
+    .result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid #ddd;
+      padding: 10px;
+      transition: transform 0.2s;
+    }
+    .result:hover {
+      transform: scale(1.05);
+    }
+    .result img {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 10px;
+    }
+    .tested-versions {
+        display: none;
+    }
+    .result:hover .tested-versions {
+        display: block;
+    }
+
+    .result .description {
+      display: none;
+      margin-top: 10px;
+    }
+    .result .tested-versions {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+    .result:hover .description {
+      display: block;
+    }
+    .no-results {
+      text-align: center;
+      font-style: italic;
+    }
+    #spigetTitle {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #navigationButtons {
+      margin-top: 10px;
+    }
+    #backButton, #nextButton {
+      margin-right: 10px;
+      padding: 8px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      display: none;
+    }
+    #backButton {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 id="spigetTitle"><a href="javascript:location.reload(true);" style="color: black; text-decoration: none;">Spiget Search</a></h1>
+  
+  <div id="searchContainer">
+    <input type="text" id="searchInput" placeholder="Enter plugin name" onkeydown="if (event.key === 'Enter') searchSpiget()">
+    <button id="searchButton" onclick="searchSpiget()">Search</button>
+  </div>
+
+  <div id="popularPlugins"></div>
+
+  <div id="resultsContainer"></div>
+
+  <div id="navigationButtons">
+    <button id="backButton" onclick="loadPreviousPage()">Back</button>
+    <button id="nextButton" onclick="loadNextPage()">Next</button>
+  </div>
+
+  <script>
+    let currentPage = 1;
+
+    // Automatically focus on the search input when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('searchInput').focus();
+      displayPopularPlugins();
+    });
+
+    function displayPopularPlugins() {
+      const popularPluginsContainer = document.getElementById('popularPlugins');
+      const apiUrl = 'https://api.spiget.org/v2/resources?sort=-downloads&limit=5';
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(plugin => {
+            const pluginElement = document.createElement('div');
+            pluginElement.classList.add('result');
+
+            const iconImg = document.createElement('img');
+            iconImg.src = plugin.icon && plugin.icon.url
+              ? `https://spigotmc.org/${plugin.icon.url}`
+              : 'noicon.png';
+            iconImg.alt = 'Plugin Icon';
+            pluginElement.appendChild(iconImg);
+
+            const pluginText = document.createElement('span');
+            const downloadUrl = `https://spigotmc.org/${plugin.file.url}`;
+            pluginText.innerHTML = `<strong><a href="${downloadUrl}" target="_blank">${plugin.name}</a></strong>`;
+            pluginElement.appendChild(pluginText);
+
+            const description = document.createElement('span');
+            description.classList.add('description');
+            description.innerHTML = plugin.tag || 'No description available.';
+            pluginElement.appendChild(description);
+
+            const testedVersions = document.createElement('span');
+            testedVersions.classList.add('tested-versions');
+            testedVersions.innerHTML = `Tested Versions: ${plugin.testedVersions.join(', ') || 'N/A'}`;
+            pluginElement.appendChild(testedVersions);
+
+            popularPluginsContainer.appendChild(pluginElement);
+          });
+        })
+        .catch(error => console.error('Error fetching popular plugins:', error));
+    }
+
+    function searchSpiget() {
+      const searchTerm = document.getElementById('searchInput').value;
+      const apiUrl = `https://api.spiget.org/v2/search/resources/${encodeURIComponent(searchTerm)}?page=1`;
+
+      // Hide popular plugins when user performs a search
+      document.getElementById('popularPlugins').style.display = 'none';
+      // Reset current page when searching
+      currentPage = 1;
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => displayResults(data))
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    function displayResults(data) {
+      const resultsContainer = document.getElementById('resultsContainer');
+      const backButton = document.getElementById('backButton');
+      const nextButton = document.getElementById('nextButton');
+      resultsContainer.style.display = 'grid';
+      
+
+      resultsContainer.innerHTML = '';
+
+      if (data.length === 0) {
+        resultsContainer.innerHTML = '<div class="no-results">No results found.</div>';
+      } else {
+        // Show the results container
+        resultsContainer.style.display = 'grid';
+
+        data.forEach(result => {
+          const resultElement = document.createElement('div');
+          resultElement.classList.add('result');
+
+          const iconImg = document.createElement('img');
+          iconImg.src = result.icon && result.icon.url
+            ? `https://spigotmc.org/${result.icon.url}`
+            : 'noicon.png';
+          iconImg.alt = 'Plugin Icon';
+          resultElement.appendChild(iconImg);
+
+          const resultText = document.createElement('span');
+          const downloadUrl = `https://spigotmc.org/${result.file.url}`;
+          resultText.innerHTML = `<strong><a href="${downloadUrl}" target="_blank">${result.name}</a></strong>`;
+          resultElement.appendChild(resultText);
+
+          const description = document.createElement('span');
+          description.classList.add('description');
+          description.innerHTML = result.tag || 'No description available.';
+          resultElement.appendChild(description);
+
+          const testedVersions = document.createElement('span');
+          testedVersions.classList.add('tested-versions');
+          testedVersions.innerHTML = `Tested Versions: ${result.testedVersions.join(', ') || 'N/A'}`;
+          resultElement.appendChild(testedVersions);
+
+          resultsContainer.appendChild(resultElement);
+        });
+
+        // Show the navigation buttons if there are more pages
+        if (currentPage > 1) {
+          backButton.style.display = 'inline-block';
+        } else {
+          backButton.style.display = 'none';
+        }
+
+        // Show the "Next" button if there are more pages
+        nextButton.style.display = 'inline-block';
+      }
+    }
+
+    function loadNextPage() {
+      const searchTerm = document.getElementById('searchInput').value;
+      currentPage++;
+
+      const apiUrl = `https://api.spiget.org/v2/search/resources/${encodeURIComponent(searchTerm)}?page=${currentPage}`;
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => displayResults(data))
+        .catch(error => console.error('Error fetching next page data:', error));
+    }
+
+    function loadPreviousPage() {
+      const searchTerm = document.getElementById('searchInput').value;
+      currentPage--;
+
+      const apiUrl = `https://api.spiget.org/v2/search/resources/${encodeURIComponent(searchTerm)}?page=${currentPage}`;
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => displayResults(data))
+        .catch(error => console.error('Error fetching previous page data:', error));
+    }
+  </script>
+
+</body>
+</html>
