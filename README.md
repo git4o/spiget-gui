@@ -11,5 +11,5 @@ Hover over the box which a plugin is in and you will see its short description a
 Clicking on the plugin's name will download it directly or take you to the page where you can download it. (This is beacuse some of the plugins are not hosted directly on SpigotMC)
 That's it!
 # Credits
-[SpiGET](https://spiget.org) and their API for providing the plugins.
+[SpiGET](https://spiget.org) and their API for providing the plugins. \
 The "No Image Avalible" icon on [iStock](https://www.istockphoto.com/vector/no-image-vector-symbol-missing-available-icon-no-gallery-for-this-moment-placeholder-gm1460443157-494621319)
